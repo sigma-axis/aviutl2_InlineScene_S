@@ -6,7 +6,7 @@
 
 画像のキャッシュ機能とも併用しているので，重い静止画のシーンを他フレームで軽量なまま再利用することなどもできます．
 
-AviUtl (無印) の InlineScene_S に比べて，音声にも対応しています．
+[AviUtl (無印) の InlineScene_S](https://github.com/sigma-axis/aviutl_script_InlineScene_S) に比べて，音声にも対応しています．
 
 [ダウンロードはこちら．](https://github.com/sigma-axis/aviutl2_InlineScene_S/releases) [紹介動画．](https://www.nicovideo.jp/watch/sm47027016)
 
