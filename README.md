@@ -8,7 +8,7 @@
 
 AviUtl (無印) の InlineScene_S に比べて，音声にも対応しています．
 
-[ダウンロードはこちら．](https://github.com/sigma-axis/aviutl2_InlineScene_S/releases) \[紹介動画．\](WIP)
+[ダウンロードはこちら．](https://github.com/sigma-axis/aviutl2_InlineScene_S/releases) [紹介動画．](https://www.nicovideo.jp/watch/sm47027016)
 
 次のオブジェクトやフィルタ効果が追加されます:
 
@@ -26,7 +26,7 @@ AviUtl (無印) の InlineScene_S に比べて，音声にも対応していま�
 
 このプラグインを使った動画などでは，ニコニコの親作品にこのプラグインの紹介動画を登録してくれると嬉しいです．任意ではありますが，登録してくれたほうが励みになります．
 
-- 登録 ID: `sm****`
+- 登録 ID: `sm47027016`
 
 ##  動作要件
 
@@ -34,7 +34,7 @@ AviUtl (無印) の InlineScene_S に比べて，音声にも対応していま�
 
   http://spring-fragrance.mints.ne.jp/aviutl
 
-  - `2.1.16` で動作確認済み．
+  - `2.1.17` で動作確認済み．
 
 ## 導入方法
 

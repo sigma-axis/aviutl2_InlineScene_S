@@ -9,8 +9,8 @@ AviUtl (無印) の InlineScene_S に比べて，音声にも対応していま�
 https://github.com/sigma-axis/aviutl2_InlineScene_S
 
 紹介動画:
-TODO: ...
+https://www.nicovideo.jp/watch/sm47027016
 
 お願い:
 ニコニコ動画での親作品登録をしていただけると励みになります．
-作品 ID: ****
+作品 ID: sm47027016
