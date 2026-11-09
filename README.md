@@ -20,13 +20,7 @@ AviUtl (無印) の InlineScene_S に比べて，音声にも対応していま�
 1.  [InlineScene_Sこのオブジェクトで次へ](#inlinescene_sこのオブジェクトで次へ)
 1.  [InlineScene_S単品保存](#inlinescene_s単品保存)
 
-TODO: images
-
-- <details>
-  <summary>元画像出典 (クリックで表示):</summary>
-
-  1.  https:...
-  </details>
+![Inline Scene S のイメージ画像](https://github.com/user-attachments/assets/f59bd11f-02ff-4c07-9da8-c9bd65678ad1)
 
 ##  お願い
 
@@ -68,7 +62,7 @@ Although, usage documentations for this plugin in languages other than Japanese 
 
 こういったミスは検知できる範囲で，ログウィンドウに[警告メッセージ](#ログ表示のメッセージ)を出力するようにしています．動画出力をした際などにはこのメッセージの確認をおすすめします．
 
-TODO: !\[警告メッセージの例\](...)
+![警告メッセージの例](https://github.com/user-attachments/assets/4081eb5f-7480-4ca8-b160-5730cc30872d)
 
 また，本来のシーン機能では可能な早送り，一時停止などの時間操作はできません．
 
@@ -86,7 +80,7 @@ TODO: !\[警告メッセージの例\](...)
 
 「InlineScene_S読み出し」で指定する「保存名」は「InlineScene_Sここまで」での「保存名」と同じものを指定してください．
 
-TODO: !\[基本レイヤー配置\](...)
+![基本レイヤー配置](https://github.com/user-attachments/assets/a58dbe8c-1b1e-4d63-8214-6d93840f4cf0)
 
 ### 派生的な使い方
 
@@ -103,7 +97,7 @@ TODO: !\[基本レイヤー配置\](...)
 
   - レイヤー数を節約できることに加えて，内部処理的にも手順が少なく低負荷です．
 
-  TODO: !\[InlineScene_S次への配置例\](...)
+  ![InlineScene_S次への配置例](https://github.com/user-attachments/assets/e00e9136-3c1f-4e62-af97-207f25843c83)
 
 - メディアオブジェクトの[「InlineScene_Sここから」](#inlinescene_sここから)を配置する代わりに，**inline scene の最初のオブジェクト**にフィルタ効果の[「InlineScene_Sこのオブジェクトから」](#inlinescene_sこのオブジェクトから)を適用することもできます．
 
@@ -389,7 +383,7 @@ AviUtl2 の他スクリプトからも利用できるという点では汎用性
 
 メインメニューの「設定」 :arrow_right: 「プラグイン設定」 :arrow_right: 「InlineScene_S」から設定ダイアログを表示できます．
 
-TODO: image
+![Inline Scene S の設定ダイアログ](https://github.com/user-attachments/assets/e863d75a-be0d-4985-95ff-d62ac882855e)
 
 次の設定項目があります:
 
