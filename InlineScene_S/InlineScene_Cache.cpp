@@ -768,6 +768,7 @@ void Image::managed_cache_list::trim(clock::time_point now)
 					auto& cache = it->second;
 					rest -= cache.width * cache.height;
 					cache.buffer = nullptr;
+					cache.data = nullptr;
 				}
 				if (rest <= 0) break;
 			}
