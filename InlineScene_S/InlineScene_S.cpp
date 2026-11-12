@@ -150,6 +150,16 @@ extern "C" __declspec(dllexport) void RegisterPlugin(HOST_APP_TABLE* host)
 		AviUtl2::finalizing::Free();
 	});
 
+	// プロジェクトロードのコールバック登録．
+	host->register_project_load_handler([](auto) static {
+		// clear the scene-dependent cache.
+		Cache::Image::scene_cache.clear();
+		Cache::Image::scene_stacks.clear();
+		Cache::Sound::scene_cache.clear();
+		Cache::Sound::scene_stacks.clear();
+	});
+
+	// 設定メニュー登録.
 	host->register_config_menu(PLUGIN_NAME, [](HWND hwnd, HINSTANCE dll_hinst) static {
 		auto [confirmed, updated] = Settings::GUI::show_setting_dialog(hwnd, dll_hinst, Settings::settings);
 		if (confirmed) {
