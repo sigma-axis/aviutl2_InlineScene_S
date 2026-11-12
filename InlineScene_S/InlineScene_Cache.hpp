@@ -14,6 +14,7 @@ THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR I
 
 #include <cstdint>
 #include <vector>
+#include <memory>
 #include <map>
 #include <string>
 #include <chrono>
@@ -77,16 +78,22 @@ namespace InlineScene_S::Cache
 		struct managed_cache_item {
 			using clock = std::chrono::steady_clock;
 			Microsoft::WRL::ComPtr<::ID3D11Texture2D> buffer{};
+			std::unique_ptr<uint64_t[]> data{};
 			int width{}, height{};
 			::OBJECT_IMAGE_PARAM params{};
 			clock::time_point last_used{};
-			constexpr bool is_deleted() const { return buffer == nullptr; }
+			constexpr bool is_deleted() const { return buffer == nullptr && data == nullptr; }
+		};
+		enum class managed_cache_type : int {
+			gpu_mem = 0,
+			cpu_mem = 1,
 		};
 		struct managed_cache_list {
 			using clock = managed_cache_item::clock;
 			std::map<std::wstring, managed_cache_item> list{};
 			clock::duration duration{};
 			int64_t max_total_dots{};
+			managed_cache_type save_type = managed_cache_type::gpu_mem;
 			void trim(clock::time_point now);
 			void trim() { trim(clock::now()); };
 			void clear() { list.clear(); }
