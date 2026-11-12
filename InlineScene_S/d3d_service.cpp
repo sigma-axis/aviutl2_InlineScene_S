@@ -126,16 +126,16 @@ ComPtr<::ID3D11Buffer> D3D::create_const_buffer(void const* data, size_t size)
 	return ret;
 }
 
-ComPtr<::ID3D11Texture1D> D3D::create_texture(::DXGI_FORMAT format, uint32_t size, void const* init)
+ComPtr<::ID3D11Texture1D> D3D::create_texture(::DXGI_FORMAT format, uint32_t size, bool staging, void const* init)
 {
 	::D3D11_TEXTURE1D_DESC desc{
 		.Width = size,
 		.MipLevels = 1,
 		.ArraySize = 1,
 		.Format = format,
-		.Usage = ::D3D11_USAGE_DEFAULT,
-		.BindFlags = ::D3D11_BIND_SHADER_RESOURCE | ::D3D11_BIND_RENDER_TARGET | ::D3D11_BIND_UNORDERED_ACCESS,
-		.CPUAccessFlags = 0,
+		.Usage = staging ? ::D3D11_USAGE_STAGING : ::D3D11_USAGE_DEFAULT,
+		.BindFlags = staging ? 0u : (::D3D11_BIND_SHADER_RESOURCE | ::D3D11_BIND_RENDER_TARGET | ::D3D11_BIND_UNORDERED_ACCESS),
+		.CPUAccessFlags = staging ? ::D3D11_CPU_ACCESS_READ : 0u,
 		.MiscFlags = 0,
 	};
 	::D3D11_SUBRESOURCE_DATA init_data{
@@ -151,7 +151,7 @@ ComPtr<::ID3D11Texture1D> D3D::create_texture(::DXGI_FORMAT format, uint32_t siz
 	return ret;
 }
 
-ComPtr<::ID3D11Texture2D> D3D::create_texture(::DXGI_FORMAT format, uint32_t width, uint32_t height, void const* init)
+ComPtr<::ID3D11Texture2D> D3D::create_texture(::DXGI_FORMAT format, uint32_t width, uint32_t height, bool staging, void const* init)
 {
 	::D3D11_TEXTURE2D_DESC desc{
 		.Width = width,
@@ -160,9 +160,9 @@ ComPtr<::ID3D11Texture2D> D3D::create_texture(::DXGI_FORMAT format, uint32_t wid
 		.ArraySize = 1,
 		.Format = format,
 		.SampleDesc = {.Count = 1, .Quality = 0 },
-		.Usage = ::D3D11_USAGE_DEFAULT,
-		.BindFlags = ::D3D11_BIND_SHADER_RESOURCE | ::D3D11_BIND_RENDER_TARGET | ::D3D11_BIND_UNORDERED_ACCESS,
-		.CPUAccessFlags = 0,
+		.Usage = staging ? ::D3D11_USAGE_STAGING : ::D3D11_USAGE_DEFAULT,
+		.BindFlags = staging ? 0u : (::D3D11_BIND_SHADER_RESOURCE | ::D3D11_BIND_RENDER_TARGET | ::D3D11_BIND_UNORDERED_ACCESS),
+		.CPUAccessFlags = staging ? ::D3D11_CPU_ACCESS_READ : 0u,
 		.MiscFlags = 0,
 	};
 	::D3D11_SUBRESOURCE_DATA init_data{
@@ -178,14 +178,14 @@ ComPtr<::ID3D11Texture2D> D3D::create_texture(::DXGI_FORMAT format, uint32_t wid
 	return ret;
 }
 
-ComPtr<::ID3D11Buffer> D3D::create_structured_buffer(uint32_t size_element, uint32_t size_byte, void const* init)
+ComPtr<::ID3D11Buffer> D3D::create_structured_buffer(uint32_t size_element, uint32_t size_byte, bool staging, void const* init)
 {
 	::D3D11_BUFFER_DESC desc{
 		.ByteWidth = size_byte,
-		.Usage = ::D3D11_USAGE_DEFAULT,
-		.BindFlags = ::D3D11_BIND_SHADER_RESOURCE | ::D3D11_BIND_UNORDERED_ACCESS,
-		.CPUAccessFlags = 0,
-		.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED,
+		.Usage = staging ? ::D3D11_USAGE_STAGING : ::D3D11_USAGE_DEFAULT,
+		.BindFlags = staging ? 0u : (::D3D11_BIND_SHADER_RESOURCE | ::D3D11_BIND_UNORDERED_ACCESS),
+		.CPUAccessFlags = staging ? ::D3D11_CPU_ACCESS_READ : 0u,
+		.MiscFlags = ::D3D11_RESOURCE_MISC_BUFFER_STRUCTURED,
 		.StructureByteStride = size_element,
 	};
 	::D3D11_SUBRESOURCE_DATA init_data{

@@ -57,22 +57,22 @@ namespace d3d_service
 			return create_const_buffer(&data, sizeof(the_type));
 		}
 
-		static ComPtr<::ID3D11Texture1D> create_texture(::DXGI_FORMAT format, uint32_t size, void const* init = nullptr);
-		static ComPtr<::ID3D11Texture2D> create_texture(::DXGI_FORMAT format, uint32_t width, uint32_t height, void const* init = nullptr);
-		static auto create_texture(::DXGI_FORMAT format, int32_t size, void const* init = nullptr)
+		static ComPtr<::ID3D11Texture1D> create_texture(::DXGI_FORMAT format, uint32_t size, bool staging = false, void const* init = nullptr);
+		static ComPtr<::ID3D11Texture2D> create_texture(::DXGI_FORMAT format, uint32_t width, uint32_t height, bool staging = false, void const* init = nullptr);
+		static auto create_texture(::DXGI_FORMAT format, int32_t size, bool staging = false, void const* init = nullptr)
 		{
-			return create_texture(format, static_cast<uint32_t>(size), init);
+			return create_texture(format, static_cast<uint32_t>(size), staging, init);
 		}
-		static auto create_texture(::DXGI_FORMAT format, int32_t width, int32_t height, void const* init = nullptr)
+		static auto create_texture(::DXGI_FORMAT format, int32_t width, int32_t height, bool staging = false, void const* init = nullptr)
 		{
-			return create_texture(format, static_cast<uint32_t>(width), static_cast<uint32_t>(height), init);
+			return create_texture(format, static_cast<uint32_t>(width), static_cast<uint32_t>(height), staging, init);
 		}
 
-		static ComPtr<::ID3D11Buffer> create_structured_buffer(uint32_t size_element, uint32_t size_byte, void const* init = nullptr);
+		static ComPtr<::ID3D11Buffer> create_structured_buffer(uint32_t size_element, uint32_t size_byte, bool staging = false, void const* init = nullptr);
 		template<class T>
-		static auto create_structured_buffer(uint32_t size_byte, T const* init)
+		static auto create_structured_buffer(uint32_t size_byte, bool staging = false, T const* init = nullptr)
 		{
-			return create_structured_buffer(static_cast<uint32_t>(sizeof(T)), size_byte, init);
+			return create_structured_buffer(static_cast<uint32_t>(sizeof(T)), size_byte, staging, init);
 		}
 
 		static ::D3D11_TEXTURE1D_DESC get_desc(::ID3D11Texture1D* tex)

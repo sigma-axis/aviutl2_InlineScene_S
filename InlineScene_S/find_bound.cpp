@@ -93,24 +93,9 @@ InlineScene_S::FindBound::bounds InlineScene_S::FindBound::Find(::ID3D11Texture2
 	// create target buffer.
 	constexpr uint32_t size_elem = sizeof(uint32_t);
 	uint32_t const size_buff = size_elem * ((height + 3) & (~3));
-	D3D::ComPtr<::ID3D11Buffer> lr_bounds, lr_bounds_copied;
-
-	lr_bounds = D3D::create_structured_buffer(size_elem, size_buff);
-	if (lr_bounds == nullptr) return {};
-	else {
-		::D3D11_BUFFER_DESC const desc{
-			.ByteWidth = size_buff,
-			.Usage = ::D3D11_USAGE_STAGING,
-			.BindFlags = 0,
-			.CPUAccessFlags = ::D3D11_CPU_ACCESS_READ,
-			.MiscFlags = ::D3D11_RESOURCE_MISC_BUFFER_STRUCTURED,
-			.StructureByteStride = size_elem,
-		};
-		if (S_OK != D3D::device->CreateBuffer(&desc, nullptr, lr_bounds_copied.ReleaseAndGetAddressOf())) {
-			logging::error(L"Failed to create structured buffer for staging!");
-			return {};
-		}
-	}
+	D3D::ComPtr<::ID3D11Buffer> const
+		lr_bounds = D3D::create_structured_buffer(size_elem, size_buff),
+		lr_bounds_copied = D3D::create_structured_buffer(size_elem, size_buff, true);
 
 	// create constant buffer.
 	auto cbuff = D3D::create_const_buffer(cs_cbuff_find{
