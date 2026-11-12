@@ -308,6 +308,10 @@ bool pop_next_stack_image(::FILTER_PROC_VIDEO* video, Image::scene_stack& self, 
 			if (crop.crop_b) pad_b -= video->scene->height - bb.bottom;
 		}
 	}
+	if (video->scene->width + pad_l <= 0 || video->scene->width + pad_r <= 0 ||
+		video->scene->width + pad_l + pad_r <= 0 ||
+		video->scene->height + pad_t <= 0 || video->scene->height + pad_b <= 0 ||
+		video->scene->height + pad_t + pad_b <= 0) is_empty = true;
 	D3D::clamp_extension_2d(pad_l, pad_r, video->scene->width);
 	D3D::clamp_extension_2d(pad_t, pad_b, video->scene->height);
 
@@ -365,6 +369,7 @@ bool pop_next_stack_image(::FILTER_PROC_VIDEO* video, Image::scene_stack& self, 
 				.buffer = D3D::create_texture(::DXGI_FORMAT_R16G16B16A16_FLOAT, width, height),
 				.width = width, .height = height,
 			};
+			buffer = cache.buffer;
 			cache.params = params;
 			cache.last_used = now;
 			Image::managed_cache.trim(now);
@@ -385,17 +390,20 @@ bool pop_next_stack_image(::FILTER_PROC_VIDEO* video, Image::scene_stack& self, 
 			}
 		}
 		if (success && buffer != nullptr) {
-			D3D11_BOX const box{
-				.left = static_cast<UINT>(std::max(-pad_l, 0)),
-				.top = static_cast<UINT>(std::max(-pad_t, 0)),
-				.front = 0,
-				.right = static_cast<UINT>(video->scene->width - std::min(pad_r, 0)),
-				.bottom = static_cast<UINT>(video->scene->width - std::min(pad_b, 0)),
-				.back = 1,
-			};
-			D3D::cxt->CopySubresourceRegion(buffer.Get(), 0,
-				std::max(pad_l, 0), std::max(pad_t, 0), 0,
-				framebuffer, 0, &box);
+			if (is_empty) D3D::cxt->ClearRenderTargetView(D3D::to_render_target_view(buffer.Get()).Get(), D3D::zero_color);
+			else {
+				D3D11_BOX const box{
+					.left = static_cast<UINT>(std::max(-pad_l, 0)),
+					.top = static_cast<UINT>(std::max(-pad_t, 0)),
+					.front = 0,
+					.right = static_cast<UINT>(video->scene->width - std::min(pad_r, 0)),
+					.bottom = static_cast<UINT>(video->scene->width - std::min(pad_b, 0)),
+					.back = 1,
+				};
+				D3D::cxt->CopySubresourceRegion(buffer.Get(), 0,
+					std::max(pad_l, 0), std::max(pad_t, 0), 0,
+					framebuffer, 0, &box);
+			}
 		}
 	}
 	if (!success) return false;
