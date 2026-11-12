@@ -135,7 +135,7 @@ ComPtr<::ID3D11Texture1D> D3D::create_texture(::DXGI_FORMAT format, uint32_t siz
 		.Format = format,
 		.Usage = staging ? ::D3D11_USAGE_STAGING : ::D3D11_USAGE_DEFAULT,
 		.BindFlags = staging ? 0u : (::D3D11_BIND_SHADER_RESOURCE | ::D3D11_BIND_RENDER_TARGET | ::D3D11_BIND_UNORDERED_ACCESS),
-		.CPUAccessFlags = staging ? ::D3D11_CPU_ACCESS_READ : 0u,
+		.CPUAccessFlags = staging ? (::D3D11_CPU_ACCESS_READ | ::D3D11_CPU_ACCESS_WRITE) : 0u,
 		.MiscFlags = 0,
 	};
 	::D3D11_SUBRESOURCE_DATA init_data{
@@ -162,7 +162,7 @@ ComPtr<::ID3D11Texture2D> D3D::create_texture(::DXGI_FORMAT format, uint32_t wid
 		.SampleDesc = {.Count = 1, .Quality = 0 },
 		.Usage = staging ? ::D3D11_USAGE_STAGING : ::D3D11_USAGE_DEFAULT,
 		.BindFlags = staging ? 0u : (::D3D11_BIND_SHADER_RESOURCE | ::D3D11_BIND_RENDER_TARGET | ::D3D11_BIND_UNORDERED_ACCESS),
-		.CPUAccessFlags = staging ? ::D3D11_CPU_ACCESS_READ : 0u,
+		.CPUAccessFlags = staging ? (::D3D11_CPU_ACCESS_READ | ::D3D11_CPU_ACCESS_WRITE) : 0u,
 		.MiscFlags = 0,
 	};
 	::D3D11_SUBRESOURCE_DATA init_data{
@@ -184,7 +184,7 @@ ComPtr<::ID3D11Buffer> D3D::create_structured_buffer(uint32_t size_element, uint
 		.ByteWidth = size_byte,
 		.Usage = staging ? ::D3D11_USAGE_STAGING : ::D3D11_USAGE_DEFAULT,
 		.BindFlags = staging ? 0u : (::D3D11_BIND_SHADER_RESOURCE | ::D3D11_BIND_UNORDERED_ACCESS),
-		.CPUAccessFlags = staging ? ::D3D11_CPU_ACCESS_READ : 0u,
+		.CPUAccessFlags = staging ? (::D3D11_CPU_ACCESS_READ | ::D3D11_CPU_ACCESS_WRITE) : 0u,
 		.MiscFlags = ::D3D11_RESOURCE_MISC_BUFFER_STRUCTURED,
 		.StructureByteStride = size_element,
 	};
@@ -199,6 +199,91 @@ ComPtr<::ID3D11Buffer> D3D::create_structured_buffer(uint32_t size_element, uint
 		return nullptr;
 	}
 	return ret;
+}
+
+bool D3D::copy_from_texture(::ID3D11Texture1D* tex, void* dst, uint32_t size_byte)
+{
+	if (::D3D11_MAPPED_SUBRESOURCE mapped{};
+		S_OK == D3D::cxt->Map(tex, 0, D3D11_MAP_READ, 0, &mapped)) {
+		std::memcpy(dst, mapped.pData, size_byte);
+		D3D::cxt->Unmap(tex, 0);
+		return true;
+	}
+	
+	logging::error(L"Failed to read from 1D texture!");
+	return false;
+}
+bool D3D::copy_from_texture(::ID3D11Texture2D* tex, void* dst, uint32_t width_byte, uint32_t height, uint32_t pitch_byte)
+{
+	if (::D3D11_MAPPED_SUBRESOURCE mapped{};
+		S_OK == D3D::cxt->Map(tex, 0, D3D11_MAP_READ, 0, &mapped)) {
+		if (mapped.RowPitch != pitch_byte) {
+			for (uint32_t y = 0; y < height; y++)
+				std::memcpy(static_cast<uint8_t*>(dst) + y * pitch_byte,
+					static_cast<uint8_t*>(mapped.pData) + y * mapped.RowPitch, width_byte);
+		}
+		else std::memcpy(dst, mapped.pData, height * pitch_byte);
+		D3D::cxt->Unmap(tex, 0);
+		return true;
+	}
+	
+	logging::error(L"Failed to read from 2D texture!");
+	return false;
+}
+bool D3D::copy_from_buffer(::ID3D11Buffer* buff, void* dst, uint32_t size_byte)
+{
+	if (::D3D11_MAPPED_SUBRESOURCE mapped{};
+		S_OK == D3D::cxt->Map(buff, 0, D3D11_MAP_READ, 0, &mapped)) {
+		std::memcpy(dst, mapped.pData, size_byte);
+		D3D::cxt->Unmap(buff, 0);
+		return true;
+	}
+	
+	logging::error(L"Failed to read from structured buffer!");
+	return false;
+}
+
+bool D3D::copy_to_texture(void* src, ::ID3D11Texture1D* tex, uint32_t size_byte)
+{
+	if (::D3D11_MAPPED_SUBRESOURCE mapped{};
+		S_OK == D3D::cxt->Map(tex, 0, D3D11_MAP_WRITE, 0, &mapped)) {
+		std::memcpy(mapped.pData, src, size_byte);
+		D3D::cxt->Unmap(tex, 0);
+		return true;
+	}
+	
+	logging::error(L"Failed to write to 1D texture!");
+	return false;
+}
+bool D3D::copy_to_texture(void* src, ::ID3D11Texture2D* tex, uint32_t width_byte, uint32_t height, uint32_t pitch_byte)
+{
+	if (::D3D11_MAPPED_SUBRESOURCE mapped{};
+		S_OK == D3D::cxt->Map(tex, 0, D3D11_MAP_WRITE, 0, &mapped)) {
+		if (mapped.RowPitch != pitch_byte) {
+			for (uint32_t y = 0; y < height; y++)
+				std::memcpy(
+					static_cast<uint8_t*>(mapped.pData) + y * mapped.RowPitch,
+					static_cast<uint8_t*>(src) + y * pitch_byte, width_byte);
+		}
+		else std::memcpy(mapped.pData, src, height * pitch_byte);
+		D3D::cxt->Unmap(tex, 0);
+		return true;
+	}
+	
+	logging::error(L"Failed to write to 2D texture!");
+	return false;
+}
+bool D3D::copy_to_buffer(void* src, ::ID3D11Buffer* buff, uint32_t size_byte)
+{
+	if (::D3D11_MAPPED_SUBRESOURCE mapped{};
+		S_OK == D3D::cxt->Map(buff, 0, D3D11_MAP_WRITE, 0, &mapped)) {
+		std::memcpy(mapped.pData, src, size_byte);
+		D3D::cxt->Unmap(buff, 0);
+		return true;
+	}
+	
+	logging::error(L"Failed to write to structured buffer!");
+	return false;
 }
 
 ComPtr<::ID3D11Texture2D> D3D::clone(::ID3D11Texture2D* src, bool copy)

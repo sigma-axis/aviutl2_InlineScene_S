@@ -11,6 +11,7 @@ THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR I
 */
 
 #pragma once
+#include <cstdint>
 
 #define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
@@ -92,6 +93,38 @@ namespace d3d_service
 			::D3D11_BUFFER_DESC ret;
 			buff->GetDesc(&ret);
 			return ret;
+		}
+
+		static bool copy_from_texture(::ID3D11Texture1D* tex, void* dst, uint32_t size_byte);
+		static bool copy_from_texture(::ID3D11Texture1D* tex, void* dst, int size_byte)
+		{
+			return copy_from_texture(tex, dst, static_cast<uint32_t>(size_byte));
+		}
+		static bool copy_from_texture(::ID3D11Texture2D* tex, void* dst, uint32_t width_byte, uint32_t height, uint32_t pitch_byte);
+		static bool copy_from_texture(::ID3D11Texture2D* tex, void* dst, int width_byte, int height, int pitch_byte)
+		{
+			return copy_from_texture(tex, dst, static_cast<uint32_t>(width_byte), static_cast<uint32_t>(height), static_cast<uint32_t>(pitch_byte));
+		}
+		static bool copy_from_buffer(::ID3D11Buffer* buff, void* dst, uint32_t size_byte);
+		static bool copy_from_buffer(::ID3D11Buffer* buff, void* dst, int size_byte)
+		{
+			return copy_from_buffer(buff, dst, static_cast<uint32_t>(size_byte));
+		}
+
+		static bool copy_to_texture(void* src, ::ID3D11Texture1D* tex, uint32_t size_byte);
+		static bool copy_to_texture(void* src, ::ID3D11Texture1D* tex, int size_byte)
+		{
+			return copy_to_texture(src, tex, static_cast<uint32_t>(size_byte));
+		}
+		static bool copy_to_texture(void* src, ::ID3D11Texture2D* tex, uint32_t width_byte, uint32_t height, uint32_t pitch_byte);
+		static bool copy_to_texture(void* src, ::ID3D11Texture2D* tex, int width_byte, int height, int pitch_byte)
+		{
+			return copy_to_texture(src, tex, static_cast<uint32_t>(width_byte), static_cast<uint32_t>(height), static_cast<uint32_t>(pitch_byte));
+		}
+		static bool copy_to_buffer(void* src, ::ID3D11Buffer* buff, uint32_t size_byte);
+		static bool copy_to_buffer(void* src, ::ID3D11Buffer* buff, int size_byte)
+		{
+			return copy_to_buffer(src, buff, static_cast<uint32_t>(size_byte));
 		}
 
 		static uint32_t get_size(::ID3D11Texture1D* tex)
