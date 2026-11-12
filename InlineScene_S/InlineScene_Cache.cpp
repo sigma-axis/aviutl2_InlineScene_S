@@ -39,8 +39,6 @@ using D3D = d3d_service::D3D;
 #include "InlineScene_Cache.hpp"
 using namespace InlineScene_S::Cache;
 
-#include "logging.hpp"
-namespace logging = AviUtl2::logging;
 #include "log_messages.hpp"
 namespace Mes = InlineScene_S::Messages;
 
@@ -346,13 +344,15 @@ bool pop_next_stack_image(::FILTER_PROC_VIDEO* video, Image::scene_stack& self, 
 			else {
 				if (cache.data != nullptr && cache.width == width && cache.height == height) /* empty */;
 				else cache = {
-					.data = std::make_unique<uint64_t[]>(((width + 1) & (~1)) * height),
+					.data = std::make_unique<uint64_t[]>(width * height),
 					.width = width, .height = height,
 				};
 				cache.buffer = nullptr;
-				video->get_image_resource_data(L"framebuffer",
-					cache.data.get(), width, height,
-					sizeof(uint64_t) * ((width + 1) & (~1)), ::OUTPUT_PIXEL_FORMAT::HF64);
+
+				auto staging = D3D::create_texture(::DXGI_FORMAT_R16G16B16A16_FLOAT, width, height, true);
+				D3D::cxt->CopyResource(staging.Get(), framebuffer);
+				success &= D3D::copy_from_texture(staging.Get(), cache.data.get(),
+					sizeof(uint64_t) * width, height, sizeof(uint64_t) * width);
 			}
 			cache.params = params;
 			cache.last_used = now;
@@ -394,7 +394,7 @@ bool pop_next_stack_image(::FILTER_PROC_VIDEO* video, Image::scene_stack& self, 
 			else {
 				if (cache.data != nullptr && cache.width == width && cache.height == height) /*empty*/;
 				else cache = {
-					.data = std::make_unique<uint64_t[]>(((width + 1) & (~1)) * height),
+					.data = std::make_unique<uint64_t[]>(width * height),
 					.width = width, .height = height,
 				};
 				cache.buffer = nullptr;
@@ -421,7 +421,10 @@ bool pop_next_stack_image(::FILTER_PROC_VIDEO* video, Image::scene_stack& self, 
 			}
 		}
 		if (success && buffer != nullptr) {
-			if (is_empty) D3D::cxt->ClearRenderTargetView(D3D::to_render_target_view(buffer.Get()).Get(), D3D::zero_color);
+			if (is_empty) {
+				if (mem_ptr == nullptr)
+					D3D::cxt->ClearRenderTargetView(D3D::to_render_target_view(buffer.Get()).Get(), D3D::zero_color);
+			}
 			else {
 				D3D11_BOX const box{
 					.left = static_cast<UINT>(std::max(-pad_l, 0)),
@@ -436,24 +439,10 @@ bool pop_next_stack_image(::FILTER_PROC_VIDEO* video, Image::scene_stack& self, 
 					framebuffer, 0, &box);
 			}
 
-			if (pop_mode != pop_mode::to_obj && type == Image::cache_type::Managed &&
-				Image::managed_cache.save_type != Image::managed_cache_type::gpu_mem &&
-				mem_ptr != nullptr) {
-				if (::D3D11_MAPPED_SUBRESOURCE mapped{};
-					S_OK != D3D::cxt->Map(buffer.Get(), 0, D3D11_MAP_READ, 0, &mapped)) {
-					logging::error(L"Failed to read from texture!");
-					Image::managed_cache.list.erase(std::wstring{ name });
-					success = false;
-				}
-				else {
-					int const pitch = (width + 1) & (~1);
-					for (int y = 0; y < height; y++) {
-						std::memcpy(&mem_ptr[y * pitch],
-							&reinterpret_cast<uint8_t*>(mapped.pData)[y * mapped.RowPitch],
-							sizeof(uint64_t) * width);
-					}
-					D3D::cxt->Unmap(buffer.Get(), 0);
-				}
+			if (mem_ptr != nullptr) {
+				if (is_empty) std::memset(mem_ptr, 0, sizeof(uint64_t) * width * height);
+				else success &= D3D::copy_from_texture(buffer.Get(), mem_ptr,
+					sizeof(uint64_t) * width, height, sizeof(uint64_t) * width);
 			}
 		}
 	}
@@ -778,46 +767,45 @@ void Image::managed_cache_list::trim(clock::time_point now)
 bool Image::managed_cache_list::save(::FILTER_PROC_VIDEO* video, std::wstring const& name, std::wstring const& source)
 {
 	init();
+	bool success = false;
 	auto const now = clock::now();
-	managed_cache_item* cache = nullptr;
-	if (save_type == managed_cache_type::gpu_mem) {
-		if (auto const buffer = video->get_image_resource_texture2d(source.c_str());
-			buffer != nullptr) {
-			auto const desc = D3D::get_desc(buffer);
-			int const width = static_cast<int>(desc.Width), height = static_cast<int>(desc.Height);
-			cache = &list[name];
-			if (cache->buffer != nullptr && cache->width == width && cache->height == height)
-				D3D::cxt->CopyResource(cache->buffer.Get(), buffer);
-			else *cache = {
+	if (auto const buffer = video->get_image_resource_texture2d(source.c_str());
+		buffer != nullptr) {
+		auto const desc = D3D::get_desc(buffer);
+		int const width = static_cast<int>(desc.Width), height = static_cast<int>(desc.Height);
+		auto& cache = list[name];
+
+		if (save_type == managed_cache_type::gpu_mem) {
+			if (cache.buffer != nullptr && cache.width == width && cache.height == height)
+				D3D::cxt->CopyResource(cache.buffer.Get(), buffer);
+			else cache = {
 				.buffer = D3D::clone(buffer),
 				.width = width,
 				.height = height,
 			};
-			cache->data = nullptr;
+			cache.data = nullptr;
+			success = true;
 		}
-	}
-	else {
-		if (int width, height; video->get_image_resource_size(source.c_str(), &width, &height)) {
-			cache = &list[name];
-			if (cache->data != nullptr && cache->width == width && cache->height == height) /* emtpy */;
-			else *cache = {
-				.data = std::make_unique<uint64_t[]>(((width + 1) & (~1)) * height),
+		else {
+			if (cache.data != nullptr && cache.width == width && cache.height == height) /* emtpy */;
+			else cache = {
+				.data = std::make_unique<uint64_t[]>(width * height),
 				.width = width,
 				.height = height,
 			};
-			cache->buffer = nullptr;
-			if (!video->get_image_resource_data(source.c_str(),
-				cache->data.get(), width, height,
-				sizeof(uint64_t) * ((width + 1) & (~1)), ::OUTPUT_PIXEL_FORMAT::HF64)) {
-				cache = nullptr;
-				list.erase(name);
-			}
+			cache.buffer = nullptr;
+
+			auto staging = D3D::create_texture(::DXGI_FORMAT_R16G16B16A16_FLOAT, width, height, true);
+			D3D::cxt->CopyResource(staging.Get(), buffer);
+			success = D3D::copy_from_texture(staging.Get(), cache.data.get(),
+				sizeof(uint64_t) * width, height, sizeof(uint64_t) * width);
+			if (!success) list.erase(name);
 		}
-	}
-	if (cache != nullptr) {
-		cache->data = nullptr;
-		cache->params = get_object_image_param(video, source == L"object"sv);
-		cache->last_used = now;
+
+		if (success) {
+			cache.params = get_object_image_param(video, source == L"object"sv);
+			cache.last_used = now;
+		}
 	}
 
 	switch (AviUtl2::edit_handle->get_edit_state()) {
@@ -830,7 +818,7 @@ bool Image::managed_cache_list::save(::FILTER_PROC_VIDEO* video, std::wstring co
 		break;
 	}
 	}
-	return cache != nullptr;
+	return success;
 }
 bool Image::managed_cache_list::load(::FILTER_PROC_VIDEO* video, std::wstring const& name,
 	std::wstring const& dest, bool restore_params, bool composite_rot)
@@ -862,30 +850,31 @@ bool Image::managed_cache_list::load(::FILTER_PROC_VIDEO* video, std::wstring co
 	else {
 		cache.last_used = now;
 
-		if (cache.buffer != nullptr) {
-			video->create_image_resource(dest.c_str(), nullptr, cache.width, cache.height);
-			auto const buffer = video->get_image_resource_texture2d(dest.c_str());
-			success &= buffer != nullptr;
-			if (success) D3D::cxt->CopyResource(buffer, cache.buffer.Get());
-		}
-		else {
-			success &= video->set_image_resource_data(dest.c_str(),
-				cache.data.get(), cache.width, cache.height,
-				sizeof(uint64_t) * ((cache.width + 1) & (~1)),
-				::INPUT_PIXEL_FORMAT::HF64);
-		}
+		video->create_image_resource(dest.c_str(), nullptr, cache.width, cache.height);
+		auto const buffer = video->get_image_resource_texture2d(dest.c_str());
+		success &= buffer != nullptr;
+		if (success) {
+			if (cache.buffer != nullptr) D3D::cxt->CopyResource(buffer, cache.buffer.Get());
+			else {
+				auto staging = D3D::create_texture(::DXGI_FORMAT_R16G16B16A16_FLOAT, cache.width, cache.height, true);
+				success &= D3D::copy_to_texture(cache.data.get(), staging.Get(),
+					sizeof(uint64_t) * cache.width, cache.height,
+					sizeof(uint64_t) * cache.width);
+				if (success) D3D::cxt->CopyResource(buffer, staging.Get());
+			}
 
-		if (success && dest == L"object"sv) {
-			*video->param = cache.params;
-			if (::OBJECT_IMAGE_PARAM p_out;
-				composite_rot &&
-				video->get_output_image_param(video->object->handle, 0, &p_out, sizeof(p_out))) {
-				auto [rx, ry, rz] = composite_euler_angles(
-					{ p_out.rx, p_out.ry, p_out.rz },
-					{ cache.params.rx, cache.params.ry, cache.params.rz });
-				video->param->rx = static_cast<float>(rx - p_out.rx);
-				video->param->ry = static_cast<float>(ry - p_out.ry);
-				video->param->rz = static_cast<float>(rz - p_out.rz);
+			if (dest == L"object"sv) {
+				*video->param = cache.params;
+				if (::OBJECT_IMAGE_PARAM p_out;
+					composite_rot &&
+					video->get_output_image_param(video->object->handle, 0, &p_out, sizeof(p_out))) {
+					auto [rx, ry, rz] = composite_euler_angles(
+						{ p_out.rx, p_out.ry, p_out.rz },
+						{ cache.params.rx, cache.params.ry, cache.params.rz });
+					video->param->rx = static_cast<float>(rx - p_out.rx);
+					video->param->ry = static_cast<float>(ry - p_out.ry);
+					video->param->rz = static_cast<float>(rz - p_out.rz);
+				}
 			}
 		}
 	}
