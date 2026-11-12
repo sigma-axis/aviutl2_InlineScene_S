@@ -44,7 +44,12 @@ constexpr auto dialog_class_name = L"InlineScene_S_SettingDialogClass";
 constexpr wchar_t const* dialog_title = PLUGIN_NAME L" の設定";
 constexpr wchar_t const* label_texts[] = {
 	L"長期キャッシュの保持期間 (分)", // Setting::cache_expire_minutes
+	L"長期キャッシュの保存先", // Setting::cache_memory_type
 	L"長期キャッシュの総ドット数", // Setting::cache_total_dots
+};
+constexpr wchar_t const* cache_memory_type_items[] = {
+	L"GPU メモリ",
+	L"CPU メモリ",
 };
 
 constexpr int scale_by_dpi(int value, int dpi)
@@ -138,8 +143,11 @@ namespace ctrl_id
 		min_spin = 1002,
 		min_label = 1003,
 
-		total_edit = 1004,
-		total_label = 1005,
+		memory_type_combo = 1004,
+		memory_type_label = 1005,
+
+		total_edit = 1006,
+		total_label = 1007,
 
 		_dummy = -1;
 }
@@ -208,11 +216,18 @@ LRESULT CALLBACK wnd_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			}
 			context->result.confirmed = true;
 			int min_value{}; int64_t total_dots{};
+			LRESULT const memory_type_index = ::SendDlgItemMessageW(hwnd,
+				ctrl_id::memory_type_combo, CB_GETCURSEL, 0, 0);
+			auto const memory_type = memory_type_index >= 0 &&
+				memory_type_index < static_cast<LRESULT>(std::size(cache_memory_type_items)) ?
+				static_cast<Setting::memory_type::id>(memory_type_index) :
+				context->current.cache_memory_type.get();
 			context->result.settings = Setting{
 				.cache_expire_minutes = get_dlg_item_int(hwnd, ctrl_id::min_edit, min_value) ?
 					min_value : context->current.cache_expire_minutes.get(),
 				.cache_total_dots = get_dlg_item_int(hwnd, ctrl_id::total_edit, total_dots) ?
 					total_dots : context->current.cache_total_dots.get(),
+				.cache_memory_type = memory_type,
 			};
 			::DestroyWindow(hwnd);
 			return 0;
@@ -288,23 +303,40 @@ HWND create_dialog(HWND parent, HMODULE dll_hinst, HFONT gui_font, dialog_cxt& c
 	int const min_edit_width = scale_by_dpi(52, dpi), total_edit_width = scale_by_dpi(72, dpi);
 	int const label_tail = scale_by_dpi(8, dpi), button_gap = scale_by_dpi(12, dpi);
 
+	// measure text.
 	std::wstring_view const
 		min_label_text = translate(label_texts[0], HEADER_NAME),
-		total_label_text = translate(label_texts[1], HEADER_NAME);
+		memory_type_label_text = translate(label_texts[1], HEADER_NAME),
+		total_label_text = translate(label_texts[2], HEADER_NAME);
+	int memory_type_text_width = 0;
+	for (auto const item : cache_memory_type_items)
+		memory_type_text_width = std::max(memory_type_text_width,
+			static_cast<int>(measure_text_size(parent, translate(item, HEADER_NAME), gui_font).cx));
+	int const memory_type_combo_width = memory_type_text_width +
+		::GetSystemMetricsForDpi(SM_CXVSCROLL, dpi) +
+		2 * ::GetSystemMetricsForDpi(SM_CXBORDER, dpi) + label_tail;
+
+	// calculate layout.
 	SIZE const min_label_text_size = measure_text_size(parent, min_label_text, gui_font),
 		min_edit_size = { min_edit_width, min_label_text_size.cy + 2 * (::GetSystemMetricsForDpi(SM_CYBORDER, dpi) + 1) },
 		min_label_size = { min_label_text_size.cx + label_tail, min_edit_size.cy },
+		memory_type_label_text_size = measure_text_size(parent, memory_type_label_text, gui_font),
+		memory_type_combo_size = { memory_type_combo_width, min_edit_size.cy },
+		memory_type_label_size = { memory_type_label_text_size.cx + label_tail, min_edit_size.cy },
 		total_label_text_size = measure_text_size(parent, total_label_text, gui_font),
 		total_edit_size = { total_edit_width, min_edit_size.cy },
 		total_label_size = { total_label_text_size.cx + label_tail, min_edit_size.cy };
 	int const value_area_right = margin.left + std::max({
 		min_label_size.cx + col_gap + min_edit_size.cx,
+		memory_type_label_size.cx + col_gap + memory_type_combo_size.cx,
 		total_label_size.cx + col_gap + total_edit_size.cx,
 		button_size.cx,
-		});
+	});
 	POINT const min_label_pos = { margin.left, margin.top },
 		min_edit_pos = { value_area_right - min_edit_size.cx, min_label_pos.y },
-		total_label_pos = { margin.left, min_label_pos.y + min_edit_size.cy + row_gap },
+		memory_type_label_pos = { margin.left, min_label_pos.y + min_edit_size.cy + row_gap },
+		memory_type_combo_pos = { value_area_right - memory_type_combo_size.cx, memory_type_label_pos.y },
+		total_label_pos = { margin.left, memory_type_label_pos.y + min_edit_size.cy + row_gap },
 		total_edit_pos = { value_area_right - total_edit_size.cx, total_label_pos.y },
 		button_pos = {
 			value_area_right - button_size.cx,
@@ -376,6 +408,25 @@ HWND create_dialog(HWND parent, HMODULE dll_hinst, HFONT gui_font, dialog_cxt& c
 	set_esc_hook(min_spin);
 	::SendMessageW(min_spin, UDM_SETRANGE32, context.current.cache_expire_minutes.min, context.current.cache_expire_minutes.max);
 	::SendMessageW(min_spin, UDM_SETPOS32, 0, context.current.cache_expire_minutes.get());
+
+	HWND const memory_type_label = ::CreateWindowExW(
+		0, WC_STATICW, memory_type_label_text.data(),
+		WS_CHILD | WS_VISIBLE | SS_LEFT,
+		memory_type_label_pos.x, memory_type_label_pos.y, memory_type_label_size.cx, memory_type_label_size.cy,
+		hwnd, reinterpret_cast<HMENU>(static_cast<INT_PTR>(ctrl_id::memory_type_label)),
+		dll_hinst, nullptr);
+	set_control_font(memory_type_label, gui_font);
+
+	HWND const memory_type_combo = ::CreateWindowExW(
+		0, WC_COMBOBOXW, nullptr,
+		WS_CHILD | WS_VISIBLE | WS_TABSTOP | CBS_DROPDOWNLIST,
+		memory_type_combo_pos.x, memory_type_combo_pos.y, memory_type_combo_size.cx, memory_type_combo_size.cy,
+		hwnd, reinterpret_cast<HMENU>(static_cast<INT_PTR>(ctrl_id::memory_type_combo)),
+		dll_hinst, nullptr);
+	set_control_font(memory_type_combo, gui_font);
+	for (auto const item : cache_memory_type_items)
+		::SendMessageW(memory_type_combo, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(translate(item, HEADER_NAME)));
+	::SendMessageW(memory_type_combo, CB_SETCURSEL, context.current.cache_memory_type.get(), 0);
 
 	HWND const total_label = ::CreateWindowExW(
 		0, WC_STATICW, total_label_text.data(),
