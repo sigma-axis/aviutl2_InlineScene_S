@@ -57,8 +57,19 @@ std::wstring setting_file_path(std::wstring_view const& ext) // `ext` contains d
 
 void apply_settings(InlineScene_S::Settings::Setting const& settings)
 {
+	constexpr auto conv_memtype = [](InlineScene_S::Settings::Setting::memory_type::id e) {
+		switch (e) {
+			using s_mem_type = InlineScene_S::Settings::Setting::memory_type::id;
+			using c_mem_type = InlineScene_S::Cache::Image::managed_cache_type;
+		default:
+		case s_mem_type::gpu: return c_mem_type::gpu_mem;
+		case s_mem_type::cpu: return c_mem_type::cpu_mem;
+		}
+	};
+
 	InlineScene_S::Cache::Image::managed_cache.duration = std::chrono::minutes(settings.cache_expire_minutes.get());
 	InlineScene_S::Cache::Image::managed_cache.max_total_dots = settings.cache_total_dots.get();
+	InlineScene_S::Cache::Image::managed_cache.save_type = conv_memtype(settings.cache_memory_type.get());
 }
 
 ////////////////////////////////

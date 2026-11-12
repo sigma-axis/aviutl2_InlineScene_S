@@ -188,7 +188,7 @@ struct field_desc {
 	auto member() const { return reinterpret_cast<T ObjectT::*>(member_ptr); }
 	template<class T> using reduce_type =
 		std::conditional_t<std::same_as<T, bool>, bool,
-		std::conditional_t<std::integral<T>, int64_t,
+		std::conditional_t<std::integral<T> || std::is_enum_v<T>, int64_t,
 		std::conditional_t<std::floating_point<T>, double,
 		std::conditional_t<std::same_as<T, std::string>, std::string,
 		std::conditional_t<std::same_as<T, std::wstring>, std::wstring,
@@ -224,6 +224,7 @@ std::map<std::string_view, field_desc<Setting>> const setting_fields = {
 
 	field(cache_expire_minutes),
 	field(cache_total_dots),
+	field(cache_memory_type),
 
 #undef field
 };

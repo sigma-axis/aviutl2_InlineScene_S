@@ -24,19 +24,46 @@ namespace InlineScene_S::Settings
 			using type = T;
 			constexpr static type def = def_val, min = min_val, max = max_val;
 			type value = def;
-			type get() const { return value; }
-			void set(type val) { value = val; }
-			prop_num& clamp() { value = std::clamp(value, min, max); return *this; }
-			prop_num() = default;
-			prop_num(type const& val) : value{ val } {}
+			constexpr type get() const { return value; }
+			constexpr void set(type val) { value = val; }
+			constexpr void clamp() { value = std::clamp(value, min, max); }
+			constexpr prop_num() : prop_num(def) {};
+			constexpr prop_num(type const& val) : value{ val } {}
+		};
+		struct memory_type {
+			enum id : int32_t {
+				gpu = 0,
+				cpu = 1,
+			};
+			constexpr static id min = id::gpu, max = id::cpu;
+		};
+		template<class T, T::id def_val>
+		struct prop_enum {
+			using host = T;
+			using type = host::id;
+			constexpr static type def = def_val, min = host::min, max = host::max;
+			type value = def;
+			constexpr type get() const { return value; }
+			constexpr void set(type val) { value = val; }
+			constexpr void clamp()
+			{
+				value = static_cast<type>(std::clamp(
+					static_cast<std::underlying_type_t<type>>(value),
+					static_cast<std::underlying_type_t<type>>(min),
+					static_cast<std::underlying_type_t<type>>(max)));
+			}
+			constexpr prop_enum() : prop_enum(def) {};
+			constexpr prop_enum(type const& val) : value{ val } {}
 		};
 
 		prop_num<int32_t, 2, 1, 60> cache_expire_minutes{};
 		prop_num<int64_t, 16'000'000, 16'000'000, 512'000'000> cache_total_dots{};
+		prop_enum<memory_type, memory_type::gpu> cache_memory_type{};
 
-		Setting& clamp() {
+		constexpr Setting& clamp() {
 			cache_expire_minutes.clamp();
 			cache_total_dots.clamp();
+			cache_memory_type.clamp();
 			return *this;
 		}
 	} settings = {};
