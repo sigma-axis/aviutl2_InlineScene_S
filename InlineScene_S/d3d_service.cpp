@@ -204,7 +204,7 @@ ComPtr<::ID3D11Buffer> D3D::create_structured_buffer(uint32_t size_element, uint
 bool D3D::copy_from_texture(::ID3D11Texture1D* tex, void* dst, uint32_t size_byte)
 {
 	if (::D3D11_MAPPED_SUBRESOURCE mapped{};
-		S_OK == D3D::cxt->Map(tex, 0, D3D11_MAP_READ, 0, &mapped)) {
+		S_OK == D3D::cxt->Map(tex, 0, ::D3D11_MAP_READ, 0, &mapped)) {
 		std::memcpy(dst, mapped.pData, size_byte);
 		D3D::cxt->Unmap(tex, 0);
 		return true;
@@ -216,13 +216,10 @@ bool D3D::copy_from_texture(::ID3D11Texture1D* tex, void* dst, uint32_t size_byt
 bool D3D::copy_from_texture(::ID3D11Texture2D* tex, void* dst, uint32_t width_byte, uint32_t height, uint32_t pitch_byte)
 {
 	if (::D3D11_MAPPED_SUBRESOURCE mapped{};
-		S_OK == D3D::cxt->Map(tex, 0, D3D11_MAP_READ, 0, &mapped)) {
-		if (mapped.RowPitch != pitch_byte) {
-			for (uint32_t y = 0; y < height; y++)
-				std::memcpy(static_cast<uint8_t*>(dst) + y * pitch_byte,
-					static_cast<uint8_t*>(mapped.pData) + y * mapped.RowPitch, width_byte);
-		}
-		else std::memcpy(dst, mapped.pData, height * pitch_byte);
+		S_OK == D3D::cxt->Map(tex, 0, ::D3D11_MAP_READ, 0, &mapped)) {
+		for (uint32_t y = 0; y < height; y++)
+			std::memcpy(static_cast<uint8_t*>(dst) + y * pitch_byte,
+				static_cast<uint8_t*>(mapped.pData) + y * mapped.RowPitch, width_byte);
 		D3D::cxt->Unmap(tex, 0);
 		return true;
 	}
@@ -233,7 +230,7 @@ bool D3D::copy_from_texture(::ID3D11Texture2D* tex, void* dst, uint32_t width_by
 bool D3D::copy_from_buffer(::ID3D11Buffer* buff, void* dst, uint32_t size_byte)
 {
 	if (::D3D11_MAPPED_SUBRESOURCE mapped{};
-		S_OK == D3D::cxt->Map(buff, 0, D3D11_MAP_READ, 0, &mapped)) {
+		S_OK == D3D::cxt->Map(buff, 0, ::D3D11_MAP_READ, 0, &mapped)) {
 		std::memcpy(dst, mapped.pData, size_byte);
 		D3D::cxt->Unmap(buff, 0);
 		return true;
@@ -246,7 +243,7 @@ bool D3D::copy_from_buffer(::ID3D11Buffer* buff, void* dst, uint32_t size_byte)
 bool D3D::copy_to_texture(void* src, ::ID3D11Texture1D* tex, uint32_t size_byte)
 {
 	if (::D3D11_MAPPED_SUBRESOURCE mapped{};
-		S_OK == D3D::cxt->Map(tex, 0, D3D11_MAP_WRITE, 0, &mapped)) {
+		S_OK == D3D::cxt->Map(tex, 0, ::D3D11_MAP_WRITE, 0, &mapped)) {
 		std::memcpy(mapped.pData, src, size_byte);
 		D3D::cxt->Unmap(tex, 0);
 		return true;
@@ -258,14 +255,10 @@ bool D3D::copy_to_texture(void* src, ::ID3D11Texture1D* tex, uint32_t size_byte)
 bool D3D::copy_to_texture(void* src, ::ID3D11Texture2D* tex, uint32_t width_byte, uint32_t height, uint32_t pitch_byte)
 {
 	if (::D3D11_MAPPED_SUBRESOURCE mapped{};
-		S_OK == D3D::cxt->Map(tex, 0, D3D11_MAP_WRITE, 0, &mapped)) {
-		if (mapped.RowPitch != pitch_byte) {
-			for (uint32_t y = 0; y < height; y++)
-				std::memcpy(
-					static_cast<uint8_t*>(mapped.pData) + y * mapped.RowPitch,
-					static_cast<uint8_t*>(src) + y * pitch_byte, width_byte);
-		}
-		else std::memcpy(mapped.pData, src, height * pitch_byte);
+		S_OK == D3D::cxt->Map(tex, 0, ::D3D11_MAP_WRITE, 0, &mapped)) {
+		for (uint32_t y = 0; y < height; y++)
+			std::memcpy(static_cast<uint8_t*>(mapped.pData) + y * mapped.RowPitch,
+				static_cast<uint8_t*>(src) + y * pitch_byte, width_byte);
 		D3D::cxt->Unmap(tex, 0);
 		return true;
 	}
@@ -276,7 +269,7 @@ bool D3D::copy_to_texture(void* src, ::ID3D11Texture2D* tex, uint32_t width_byte
 bool D3D::copy_to_buffer(void* src, ::ID3D11Buffer* buff, uint32_t size_byte)
 {
 	if (::D3D11_MAPPED_SUBRESOURCE mapped{};
-		S_OK == D3D::cxt->Map(buff, 0, D3D11_MAP_WRITE, 0, &mapped)) {
+		S_OK == D3D::cxt->Map(buff, 0, ::D3D11_MAP_WRITE, 0, &mapped)) {
 		std::memcpy(mapped.pData, src, size_byte);
 		D3D::cxt->Unmap(buff, 0);
 		return true;

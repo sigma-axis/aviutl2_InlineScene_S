@@ -185,11 +185,10 @@ bool save_scene_cache_image(::FILTER_PROC_VIDEO* video, Image::scene_cache_list&
 
 	auto const params = get_object_image_param(video, source == L"object"sv);
 	int width, height;
-	bool success = true;
-	success &= video->get_image_resource_size(source.c_str(), &width, &height);
-	success &= video->copy_image_resource(name.c_str(), source.c_str());
+	bool success = video->get_image_resource_size(source.c_str(), &width, &height)
+		&& video->copy_image_resource(name.c_str(), source.c_str());
 
-	if (success) map[name] = { .width = width, .height = height, .params = params };
+	if (success) [[likely]] map[name] = { .width = width, .height = height, .params = params };
 	return success;
 }
 bool load_scene_cache_image(::FILTER_PROC_VIDEO* video, Image::scene_cache_list& list, bool is_ref, int64_t render_id,
@@ -328,7 +327,7 @@ bool pop_next_stack_image(::FILTER_PROC_VIDEO* video, Image::scene_stack& self, 
 	bool success = true;
 	if (!is_empty && pad_l == 0 && pad_r == 0 && pad_t == 0 && pad_b == 0) {
 		if (pop_mode == pop_mode::to_obj)
-			success &= video->copy_image_resource(L"object", L"framebuffer");
+			success = video->copy_image_resource(L"object", L"framebuffer");
 		else if (type == Image::cache_type::Managed) {
 			auto const now = Image::managed_cache_item::clock::now();
 			auto& cache = Image::managed_cache.list[std::wstring{ name }];
@@ -351,7 +350,7 @@ bool pop_next_stack_image(::FILTER_PROC_VIDEO* video, Image::scene_stack& self, 
 
 				auto staging = D3D::create_texture(::DXGI_FORMAT_R16G16B16A16_FLOAT, width, height, true);
 				D3D::cxt->CopyResource(staging.Get(), framebuffer);
-				success &= D3D::copy_from_texture(staging.Get(), cache.data.get(),
+				success = D3D::copy_from_texture(staging.Get(), cache.data.get(),
 					sizeof(uint64_t) * width, height, sizeof(uint64_t) * width);
 			}
 			cache.params = params;
@@ -360,8 +359,8 @@ bool pop_next_stack_image(::FILTER_PROC_VIDEO* video, Image::scene_stack& self, 
 		}
 		else {
 			auto const cache_name = std::format(L"cache:{}", name);
-			success &= video->copy_image_resource(cache_name.c_str(), L"framebuffer");
-			if (success) {
+			success = video->copy_image_resource(cache_name.c_str(), L"framebuffer");
+			if (success) [[likely]] {
 				auto& list = Image::scene_cache[self.scene_id];
 				trim_scene_cache_image(video, list, is_ref, render_id);
 				auto& map = is_ref ? list.ref : list.main;
@@ -409,8 +408,8 @@ bool pop_next_stack_image(::FILTER_PROC_VIDEO* video, Image::scene_stack& self, 
 			auto const cache_name = std::format(L"cache:{}", name);
 			video->create_image_resource(cache_name.c_str(), nullptr, width, height);
 			buffer = video->get_image_resource_texture2d(cache_name.c_str());
-			success &= buffer != nullptr;
-			if (success) {
+			success = buffer != nullptr;
+			if (success) [[likely]] {
 				auto& list = Image::scene_cache[self.scene_id];
 				trim_scene_cache_image(video, list, is_ref, render_id);
 				auto& map = is_ref ? list.ref : list.main;
@@ -420,7 +419,7 @@ bool pop_next_stack_image(::FILTER_PROC_VIDEO* video, Image::scene_stack& self, 
 				};
 			}
 		}
-		if (success && buffer != nullptr) {
+		if (success && buffer != nullptr) [[likely]] {
 			if (is_empty) {
 				if (mem_ptr == nullptr)
 					D3D::cxt->ClearRenderTargetView(D3D::to_render_target_view(buffer.Get()).Get(), D3D::zero_color);
@@ -441,12 +440,12 @@ bool pop_next_stack_image(::FILTER_PROC_VIDEO* video, Image::scene_stack& self, 
 
 			if (mem_ptr != nullptr) {
 				if (is_empty) std::memset(mem_ptr, 0, sizeof(uint64_t) * width * height);
-				else success &= D3D::copy_from_texture(buffer.Get(), mem_ptr,
+				else success = D3D::copy_from_texture(buffer.Get(), mem_ptr,
 					sizeof(uint64_t) * width, height, sizeof(uint64_t) * width);
 			}
 		}
 	}
-	if (!success) return false;
+	if (!success) [[unlikely]] return false;
 	if (pop_mode == pop_mode::to_obj) {
 		video->param->cx += cx;
 		video->param->cy += cy;
@@ -799,10 +798,10 @@ bool Image::managed_cache_list::save(::FILTER_PROC_VIDEO* video, std::wstring co
 			D3D::cxt->CopyResource(staging.Get(), buffer);
 			success = D3D::copy_from_texture(staging.Get(), cache.data.get(),
 				sizeof(uint64_t) * width, height, sizeof(uint64_t) * width);
-			if (!success) list.erase(name);
+			if (!success) [[unlikely]] list.erase(name);
 		}
 
-		if (success) {
+		if (success) [[likely]] {
 			cache.params = get_object_image_param(video, source == L"object"sv);
 			cache.last_used = now;
 		}
@@ -852,18 +851,18 @@ bool Image::managed_cache_list::load(::FILTER_PROC_VIDEO* video, std::wstring co
 
 		video->create_image_resource(dest.c_str(), nullptr, cache.width, cache.height);
 		auto const buffer = video->get_image_resource_texture2d(dest.c_str());
-		success &= buffer != nullptr;
+		success = buffer != nullptr;
 		if (success) {
 			if (cache.buffer != nullptr) D3D::cxt->CopyResource(buffer, cache.buffer.Get());
 			else {
 				auto staging = D3D::create_texture(::DXGI_FORMAT_R16G16B16A16_FLOAT, cache.width, cache.height, true);
-				success &= D3D::copy_to_texture(cache.data.get(), staging.Get(),
+				success = D3D::copy_to_texture(cache.data.get(), staging.Get(),
 					sizeof(uint64_t) * cache.width, cache.height,
 					sizeof(uint64_t) * cache.width);
-				if (success) D3D::cxt->CopyResource(buffer, staging.Get());
+				if (success) [[likely]] D3D::cxt->CopyResource(buffer, staging.Get());
 			}
 
-			if (dest == L"object"sv) {
+			if (success && dest == L"object"sv) {
 				*video->param = cache.params;
 				if (::OBJECT_IMAGE_PARAM p_out;
 					composite_rot &&
