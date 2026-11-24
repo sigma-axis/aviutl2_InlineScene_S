@@ -132,7 +132,7 @@ angle_euler composite_euler_angles(angle_euler const& rot2, angle_euler const& r
 	if (is_obj) {
 		ret = *video->param;
 		if (::OBJECT_IMAGE_PARAM p_out;
-			video->get_output_image_param(video->object->handle, 0, &p_out, sizeof(p_out)))
+			video->get_output_image_param(nullptr, 0, &p_out, sizeof(p_out)))
 			ret = {
 				.x = ret.x + p_out.x, .y = ret.y + p_out.y, .z = ret.z + p_out.z,
 				.rx = ret.rx + p_out.rx, .ry = ret.ry + p_out.ry, .rz = ret.rz + p_out.rz,
@@ -152,7 +152,7 @@ angle_euler composite_euler_angles(angle_euler const& rot2, angle_euler const& r
 	if (is_obj) {
 		ret = *audio->param;
 		if (::OBJECT_AUDIO_PARAM p_out;
-			audio->get_output_audio_param(audio->object->handle, 0, &p_out, sizeof(p_out)))
+			audio->get_output_audio_param(nullptr, 0, &p_out, sizeof(p_out)))
 			ret = {
 				.vol_l = ret.vol_l * p_out.vol_l,
 				.vol_r = ret.vol_r * p_out.vol_r,
@@ -223,7 +223,7 @@ bool load_scene_cache_image(::FILTER_PROC_VIDEO* video, Image::scene_cache_list&
 		*video->param = cache.params;
 		if (::OBJECT_IMAGE_PARAM p_out;
 			composite_rot &&
-			video->get_output_image_param(video->object->handle, 0, &p_out, sizeof(p_out))) {
+			video->get_output_image_param(nullptr, 0, &p_out, sizeof(p_out))) {
 			auto [rx, ry, rz] = composite_euler_angles(
 				{ p_out.rx, p_out.ry, p_out.rz },
 				{ cache.params.rx, cache.params.ry, cache.params.rz });
@@ -430,7 +430,7 @@ bool pop_next_stack_image(::FILTER_PROC_VIDEO* video, Image::scene_stack& self, 
 					.top = static_cast<UINT>(std::max(-pad_t, 0)),
 					.front = 0,
 					.right = static_cast<UINT>(video->scene->width - std::min(pad_r, 0)),
-					.bottom = static_cast<UINT>(video->scene->width - std::min(pad_b, 0)),
+					.bottom = static_cast<UINT>(video->scene->height - std::min(pad_b, 0)),
 					.back = 1,
 				};
 				D3D::cxt->CopySubresourceRegion(buffer.Get(), 0,
@@ -492,9 +492,9 @@ void save_sound_core(::FILTER_PROC_AUDIO* audio, Sound::cache_item& self)
 	auto const params = get_object_audio_param(audio);
 	size_t const N = audio->object->sample_num;
 	self.buffer[0].resize(N);
-	audio->get_audiobuffer_data(self.buffer[0].data(), 0);
+	audio->get_sample_data(self.buffer[0].data(), 0);
 	self.buffer[1].resize(N);
-	audio->get_audiobuffer_data(self.buffer[1].data(), 1);
+	audio->get_sample_data(self.buffer[1].data(), 1);
 	self.params = params;
 }
 
@@ -562,7 +562,7 @@ void trim_stack_sound(::FILTER_PROC_AUDIO* audio, Sound::scene_stack& self, bool
 				Mes::list::error_left_unclosed(),
 				Mes::helper::effect_name(audio), Mes::list::word_audio(),
 				Mes::list::word_position_at(), Mes::helper::frame_layers(audio, self.main_pos,
-					{ std::from_range, self.main | std::views::transform([](auto x) {return x.layer; }) }),
+					{ std::from_range, self.main | std::views::transform([](auto& x) {return x.layer; }) }),
 				Mes::list::word_detected_at(), Mes::helper::frame_layer(audio,
 					audio->object->origin_frame, audio->object->effect_layer + 1));
 			AviUtl2::logging::warn(mes.c_str());
@@ -866,7 +866,7 @@ bool Image::managed_cache_list::load(::FILTER_PROC_VIDEO* video, std::wstring co
 				*video->param = cache.params;
 				if (::OBJECT_IMAGE_PARAM p_out;
 					composite_rot &&
-					video->get_output_image_param(video->object->handle, 0, &p_out, sizeof(p_out))) {
+					video->get_output_image_param(nullptr, 0, &p_out, sizeof(p_out))) {
 					auto [rx, ry, rz] = composite_euler_angles(
 						{ p_out.rx, p_out.ry, p_out.rz },
 						{ cache.params.rx, cache.params.ry, cache.params.rz });
