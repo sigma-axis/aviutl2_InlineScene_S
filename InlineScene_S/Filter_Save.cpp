@@ -36,7 +36,7 @@ ANON_NS_B
 // core functionalities.
 ////////////////////////////////
 bool filter_image_core(::FILTER_PROC_VIDEO* video,
-	std::wstring_view const& name, Cache::Image::cache_type cache_type)
+	std::wstring const& name, Cache::Image::cache_type cache_type)
 {
 	switch (cache_type) {
 	default:
@@ -47,7 +47,7 @@ bool filter_image_core(::FILTER_PROC_VIDEO* video,
 		return list.save(video, name, L"object"s);
 	}
 	case Common::cache_type::Managed:
-		return Cache::Image::managed_cache.save(video, std::wstring{ name }, L"object"s);
+		return Cache::Image::managed_cache.save(video, name, L"object"s);
 	}
 }
 void filter_sound_core(::FILTER_PROC_AUDIO* audio, std::wstring const& name)

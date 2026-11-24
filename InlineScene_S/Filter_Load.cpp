@@ -36,7 +36,7 @@ ANON_NS_B
 // core functionalities.
 ////////////////////////////////
 bool filter_image_core(::FILTER_PROC_VIDEO* video,
-	std::wstring_view const& name, Cache::Image::cache_type cache_type,
+	std::wstring const& name, Cache::Image::cache_type cache_type,
 	bool restore_params, bool composite_rot)
 {
 	switch (cache_type) {
@@ -49,7 +49,7 @@ bool filter_image_core(::FILTER_PROC_VIDEO* video,
 	}
 	case Common::cache_type::Managed:
 	{
-		return Cache::Image::managed_cache.load(video, std::wstring{ name }, L"object"s,
+		return Cache::Image::managed_cache.load(video, name, L"object"s,
 			restore_params, composite_rot);
 	}
 	}

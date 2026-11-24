@@ -41,7 +41,7 @@ enum class pop_type {
 	to_obj,
 	others,
 };
-bool filter_image(::FILTER_PROC_VIDEO* video, pop_type pop_type, std::wstring_view const& name,
+bool filter_image(::FILTER_PROC_VIDEO* video, pop_type pop_type, std::wstring const& name,
 	Cache::Image::cache_type cache_type, Cache::Image::crop_desc const& crop)
 {
 	if (!Common::verify_open_close_image(video)) return false;

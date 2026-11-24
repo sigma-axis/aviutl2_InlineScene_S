@@ -16,6 +16,7 @@ THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR I
 #include <memory>
 #include <vector>
 #include <string>
+using namespace std::string_literals;
 using namespace std::string_view_literals;
 
 #include <format>
@@ -278,7 +279,7 @@ enum class pop_mode {
 	others,
 };
 bool pop_next_stack_image(::FILTER_PROC_VIDEO* video, Image::scene_stack& self, bool is_ref, int64_t render_id,
-	pop_mode pop_mode, std::wstring_view const& name, Image::cache_type type, Image::crop_desc const& crop)
+	pop_mode pop_mode, std::wstring const& name, Image::cache_type type, Image::crop_desc const& crop)
 {
 	size_t const index = is_ref ? self.ref_count : self.main.size();
 	if (index == 0) {
@@ -330,7 +331,7 @@ bool pop_next_stack_image(::FILTER_PROC_VIDEO* video, Image::scene_stack& self, 
 			success = video->copy_image_resource(L"object", L"framebuffer");
 		else if (type == Image::cache_type::Managed) {
 			auto const now = Image::managed_cache_item::clock::now();
-			auto& cache = Image::managed_cache.list[std::wstring{ name }];
+			auto& cache = Image::managed_cache.list[name];
 			if (Image::managed_cache.save_type == Image::managed_cache_type::gpu_mem) {
 				if (cache.buffer != nullptr && cache.width == width && cache.height == height)
 					D3D::cxt->CopyResource(cache.buffer.Get(), framebuffer);
@@ -380,7 +381,7 @@ bool pop_next_stack_image(::FILTER_PROC_VIDEO* video, Image::scene_stack& self, 
 		}
 		else if (type == Image::cache_type::Managed) {
 			auto const now = Image::managed_cache_item::clock::now();
-			auto& cache = Image::managed_cache.list[std::wstring{ name }];
+			auto& cache = Image::managed_cache.list[name];
 			if (Image::managed_cache.save_type == Image::managed_cache_type::gpu_mem) {
 				if (cache.buffer != nullptr && cache.width == width && cache.height == height) /*empty*/;
 				else cache = {
@@ -487,9 +488,9 @@ bool pop_next_stack_image(::FILTER_PROC_VIDEO* video, Image::scene_stack& self, 
 }
 
 // Sound::cache_item
-void save_sound_core(::FILTER_PROC_AUDIO* audio, Sound::cache_item& self)
+void save_sound_core(::FILTER_PROC_AUDIO* audio, Sound::cache_item& self, bool is_obj)
 {
-	auto const params = get_object_audio_param(audio);
+	auto const params = get_object_audio_param(audio, is_obj);
 	size_t const N = audio->object->sample_num;
 	self.buffer[0].resize(N);
 	audio->get_sample_data(self.buffer[0].data(), 0);
@@ -526,10 +527,10 @@ void trim_scene_cache_sound(::FILTER_PROC_AUDIO* audio, Sound::scene_cache_list&
 	}
 }
 void save_scene_cache_sound(::FILTER_PROC_AUDIO* audio, Sound::scene_cache_list& self, bool is_ref, int64_t render_id,
-	std::wstring const& name)
+	std::wstring const& name, bool is_obj)
 {
 	auto& map = is_ref ? self.ref : self.main;
-	save_sound_core(audio, map[name]);
+	save_sound_core(audio, map[name], is_obj);
 }
 bool load_scene_cache_sound(::FILTER_PROC_AUDIO* audio, Sound::scene_cache_list& self, bool is_ref, int64_t render_id,
 	std::wstring const& name, bool restore_params)
@@ -622,16 +623,10 @@ bool pop_next_stack_sound(::FILTER_PROC_AUDIO* audio, Sound::scene_stack& self, 
 		auto& list = Sound::scene_cache[audio->scene->id];
 		list.scene_id = audio->scene->id;
 		trim_scene_cache_sound(audio, list, is_ref, render_id);
-		auto& map = is_ref ? list.ref : list.main;
+		save_scene_cache_sound(audio, list, is_ref, render_id, name, false);
 
-		auto& cache = map[name];
-		cache.buffer[0].resize(N);
-		audio->get_audiobuffer_data(cache.buffer[0].data(), 0);
 		audio->set_audiobuffer_data(item.buffer[0].data(), 0);
-		cache.buffer[1].resize(N);
-		audio->get_audiobuffer_data(cache.buffer[1].data(), 1);
 		audio->set_audiobuffer_data(item.buffer[1].data(), 1);
-		cache.params = get_object_audio_param(audio, false);
 	}
 
 	if (pop_mode != pop_mode::next) tgt.pop_back();
@@ -668,9 +663,9 @@ bool Image::scene_stack::pop(::FILTER_PROC_VIDEO* video, crop_desc const& crop)
 	auto const is_ref = video->scene->is_reference_frame();
 	auto const render_id = video->scene->rendering_id;
 	trim_stack_image(video, *this, is_ref, render_id);
-	return pop_next_stack_image(video, *this, is_ref, render_id, pop_mode::to_obj, L""sv, {}, crop);
+	return pop_next_stack_image(video, *this, is_ref, render_id, pop_mode::to_obj, L""s, {}, crop);
 }
-bool Image::scene_stack::pop(::FILTER_PROC_VIDEO* video, std::wstring_view const& name, cache_type type, crop_desc const& crop)
+bool Image::scene_stack::pop(::FILTER_PROC_VIDEO* video, std::wstring const& name, cache_type type, crop_desc const& crop)
 {
 	init();
 	auto const is_ref = video->scene->is_reference_frame();
@@ -678,7 +673,7 @@ bool Image::scene_stack::pop(::FILTER_PROC_VIDEO* video, std::wstring_view const
 	trim_stack_image(video, *this, is_ref, render_id);
 	return pop_next_stack_image(video, *this, is_ref, render_id, pop_mode::others, name, type, crop);
 }
-bool Image::scene_stack::next(::FILTER_PROC_VIDEO* video, std::wstring_view const& name, cache_type type, crop_desc const& crop)
+bool Image::scene_stack::next(::FILTER_PROC_VIDEO* video, std::wstring const& name, cache_type type, crop_desc const& crop)
 {
 	init();
 	auto const is_ref = video->scene->is_reference_frame();
@@ -700,7 +695,7 @@ void Image::scene_cache_list::trim(::FILTER_PROC_VIDEO* video)
 	auto const render_id = video->scene->rendering_id;
 	trim_scene_cache_image(video, *this, is_ref, render_id);
 }
-bool Image::scene_cache_list::save(::FILTER_PROC_VIDEO* video, std::wstring_view const& name, std::wstring const& source)
+bool Image::scene_cache_list::save(::FILTER_PROC_VIDEO* video, std::wstring const& name, std::wstring const& source)
 {
 	init();
 	auto const is_ref = video->scene->is_reference_frame();
@@ -709,7 +704,7 @@ bool Image::scene_cache_list::save(::FILTER_PROC_VIDEO* video, std::wstring_view
 	return save_scene_cache_image(video, *this, is_ref, render_id,
 		std::format(L"cache:{}", name), source);
 }
-bool Image::scene_cache_list::load(::FILTER_PROC_VIDEO* video, std::wstring_view const& name,
+bool Image::scene_cache_list::load(::FILTER_PROC_VIDEO* video, std::wstring const& name,
 	std::wstring const& dest, bool restore_params, bool composite_rot)
 {
 	init();
@@ -946,7 +941,7 @@ void Sound::scene_cache_list::save(::FILTER_PROC_AUDIO* audio, std::wstring cons
 	auto const is_ref = audio->scene->is_reference_frame();
 	auto const render_id = audio->scene->rendering_id;
 	trim_scene_cache_sound(audio, *this, is_ref, render_id);
-	save_scene_cache_sound(audio, *this, is_ref, render_id, name);
+	save_scene_cache_sound(audio, *this, is_ref, render_id, name, true);
 }
 bool Sound::scene_cache_list::load(::FILTER_PROC_AUDIO* audio, std::wstring const& name, bool restore_params)
 {

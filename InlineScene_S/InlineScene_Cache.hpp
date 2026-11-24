@@ -51,8 +51,8 @@ namespace InlineScene_S::Cache
 			void trim(::FILTER_PROC_VIDEO* video);
 			bool push(::FILTER_PROC_VIDEO* video);
 			bool pop(::FILTER_PROC_VIDEO* video, crop_desc const& crop);
-			bool pop(::FILTER_PROC_VIDEO* video, std::wstring_view const& name, cache_type type, crop_desc const& crop);
-			bool next(::FILTER_PROC_VIDEO* video, std::wstring_view const& name, cache_type type, crop_desc const& crop);
+			bool pop(::FILTER_PROC_VIDEO* video, std::wstring const& name, cache_type type, crop_desc const& crop);
+			bool next(::FILTER_PROC_VIDEO* video, std::wstring const& name, cache_type type, crop_desc const& crop);
 			static std::wstring get_cache_name(int scene_id, bool is_ref, size_t index);
 		};
 		inline std::map<int, scene_stack> scene_stacks = {};
@@ -70,8 +70,8 @@ namespace InlineScene_S::Cache
 			std::map<std::wstring, scene_cache_item> ref{};
 
 			void trim(::FILTER_PROC_VIDEO* video);
-			bool save(::FILTER_PROC_VIDEO* video, std::wstring_view const& name, std::wstring const& source);
-			bool load(::FILTER_PROC_VIDEO* video, std::wstring_view const& name, std::wstring const& dest, bool restore_params, bool composite_rot);
+			bool save(::FILTER_PROC_VIDEO* video, std::wstring const& name, std::wstring const& source);
+			bool load(::FILTER_PROC_VIDEO* video, std::wstring const& name, std::wstring const& dest, bool restore_params, bool composite_rot);
 		};
 		inline std::map<int, scene_cache_list> scene_cache = {};
 
