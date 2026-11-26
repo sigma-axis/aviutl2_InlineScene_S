@@ -209,6 +209,13 @@ bool load_scene_cache_image(::FILTER_PROC_VIDEO* video, Image::scene_cache_list&
 	}
 	auto& cache = it->second;
 
+	float out_rx = 0, out_ry = 0, out_rz = 0;
+	if (::OBJECT_IMAGE_PARAM p_out;
+		restore_params && composite_rot &&
+		video->get_output_image_param(nullptr, 0, &p_out, sizeof(p_out))) {
+		out_rx = p_out.rx, out_ry = p_out.ry, out_rz = p_out.rz;
+	}
+
 	if (!video->copy_image_resource(dest.c_str(), name.c_str())) {
 		auto const mes = std::format(L"{}\n> [{} / {}] {}: {:?}, {}: {}.",
 			Mes::list::error_cache_deleted(),
@@ -222,15 +229,13 @@ bool load_scene_cache_image(::FILTER_PROC_VIDEO* video, Image::scene_cache_list&
 
 	if (dest == L"object"sv && restore_params) {
 		*video->param = cache.params;
-		if (::OBJECT_IMAGE_PARAM p_out;
-			composite_rot &&
-			video->get_output_image_param(nullptr, 0, &p_out, sizeof(p_out))) {
+		if (out_rx != 0 || out_ry != 0 || out_rz != 0) {
 			auto [rx, ry, rz] = composite_euler_angles(
-				{ p_out.rx, p_out.ry, p_out.rz },
+				{ out_rx, out_ry, out_rz },
 				{ cache.params.rx, cache.params.ry, cache.params.rz });
-			video->param->rx = static_cast<float>(rx - p_out.rx);
-			video->param->ry = static_cast<float>(ry - p_out.ry);
-			video->param->rz = static_cast<float>(rz - p_out.rz);
+			video->param->rx = static_cast<float>(rx - out_rx);
+			video->param->ry = static_cast<float>(ry - out_ry);
+			video->param->rz = static_cast<float>(rz - out_rz);
 		}
 	}
 	return true;
@@ -844,6 +849,13 @@ bool Image::managed_cache_list::load(::FILTER_PROC_VIDEO* video, std::wstring co
 	else {
 		cache.last_used = now;
 
+		float out_rx = 0, out_ry = 0, out_rz = 0;
+		if (::OBJECT_IMAGE_PARAM p_out;
+			restore_params && composite_rot &&
+			video->get_output_image_param(nullptr, 0, &p_out, sizeof(p_out))) {
+			out_rx = p_out.rx, out_ry = p_out.ry, out_rz = p_out.rz;
+		}
+
 		video->create_image_resource(dest.c_str(), nullptr, cache.width, cache.height);
 		auto const buffer = video->get_image_resource_texture2d(dest.c_str());
 		success = buffer != nullptr;
@@ -857,17 +869,15 @@ bool Image::managed_cache_list::load(::FILTER_PROC_VIDEO* video, std::wstring co
 				if (success) [[likely]] D3D::cxt->CopyResource(buffer, staging.Get());
 			}
 
-			if (success && dest == L"object"sv) {
+			if (success && dest == L"object"sv && restore_params) {
 				*video->param = cache.params;
-				if (::OBJECT_IMAGE_PARAM p_out;
-					composite_rot &&
-					video->get_output_image_param(nullptr, 0, &p_out, sizeof(p_out))) {
+				if (out_rx != 0 || out_ry != 0 || out_rz != 0) {
 					auto [rx, ry, rz] = composite_euler_angles(
-						{ p_out.rx, p_out.ry, p_out.rz },
+						{ out_rx, out_ry, out_rz },
 						{ cache.params.rx, cache.params.ry, cache.params.rz });
-					video->param->rx = static_cast<float>(rx - p_out.rx);
-					video->param->ry = static_cast<float>(ry - p_out.ry);
-					video->param->rz = static_cast<float>(rz - p_out.rz);
+					video->param->rx = static_cast<float>(rx - out_rx);
+					video->param->ry = static_cast<float>(ry - out_ry);
+					video->param->rz = static_cast<float>(rz - out_rz);
 				}
 			}
 		}
