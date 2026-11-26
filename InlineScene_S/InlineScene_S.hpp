@@ -22,13 +22,13 @@ THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR I
 #define PLUGIN_INFO_FMT(name, ver, author)	(name " " ver " by " author)
 #define FILTER_LABEL_FMT(label)				(PLUGIN_NAME "\\" label)
 
-#define LEAST_AVIUTL2_VER_STR	"2.1.17"
+#define LEAST_AVIUTL2_VER_STR	"2.1.19a"
 
 struct EDIT_HANDLE;
 struct CONFIG_HANDLE;
 namespace AviUtl2
 {
-	constexpr uint32_t least_aviutl2_ver_num = 2011700;
+	constexpr uint32_t least_aviutl2_ver_num = 2011901;
 	inline constinit ::EDIT_HANDLE* edit_handle = nullptr;
 	inline constinit ::CONFIG_HANDLE* config = nullptr;
 	wchar_t const* translate(wchar_t const* str, wchar_t const* section);
